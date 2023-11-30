@@ -72,3 +72,6 @@ class TableLinesRemover():
     def store_process_image(self, file_name, image):
         path = "./process_images/table_lines_remover/" + file_name
         # cv2_imshow(image)
+
+
+

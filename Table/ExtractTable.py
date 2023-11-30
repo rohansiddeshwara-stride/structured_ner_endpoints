@@ -4,30 +4,30 @@ import os
 import numpy as np
  
 
-from TableDetectors import DetectTable,YoloTableDetector,YOLO_MODEL
-from TableExtractors import ExtractDataBordered,Borderless_Table_digital
-from TableExtractors import OcrToTableTool,ExtractDataBorderedScanned
+from TableDetectors import DetectTable, YoloTableDetector, YOLO_MODEL
+from TableExtractors import ExtractDataBordered, Borderless_Table_digital
+from TableExtractors import OcrToTableTool, ExtractDataBorderedScanned
 
 from .utils import TableLinesRemover
 
 
+
+MODEL = LoadYolo()
+table_detector = DetectTable()
+
 class TableExtraction():
 
-  def __init__(self, doc_path):
-
+  def execute(self,doc_path):
     self.doc_path = doc_path
-
-    self.table_detector = DetectTable()
     self.document = fitz.open(self.doc_path)
 
-
-  def execute(self):
 
     pages_dict = self.get_pdf_searchable_pages(self.doc_path)
     self.tables= {}
 
     self.extracted_table_list=[]
 
+    self.extrated_table_list_with_bbox =[]
     # pages_dict['digital']=list(range(45,51))
     for page_no in pages_dict['digital']:
 
@@ -38,8 +38,10 @@ class TableExtraction():
         mat = fitz.Matrix(zoom_x, zoom_y)
         pix = page.get_pixmap(matrix=mat)
         pix.save("page.png")
-        table_list,_ = self.table_detector.extract_table_bbox("page.png")
+        table_list,_ = table_detector.extract_table_bbox("page.png")
         # print(table_list)
+        if len(table_list)< 1:
+            table_list= YoloTableDetector("page.png",MODEL)
         if len(table_list)>0:
           page_image=cv2.imread('page.png')
           for table_no,bbox in enumerate(table_list):
@@ -47,52 +49,58 @@ class TableExtraction():
 
             if self.is_bodered(cropped_image):
                 extract_data = ExtractDataBordered(page_image, page_no,bbox,table_no,self.doc_path)
-                data= extract_data.execute(page_no,table_no)
+                data,table_with_cell_mapping = extract_data.execute(page_no,table_no)
                 if data["data"] != [[" "]]:
                   self.extracted_table_list.append(data)
+
+                  json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(table_with_cell_mapping) + 1}"}
+                  self.extrated_table_list_with_cell_bbox.append(table_with_cell_mapping)
 
             else :
-                table_gen = GenerateTable(bbox,page_no,self.doc_path)
-                data= table_gen.execute(page_no,table_no)
+                table_gen = Borderless_Table_digital(bbox,page_no,self.doc_path)
+                data,table_with_cell_mapping= table_gen.execute(page_no,table_no)
                 if data["data"] != [[" "]]:
                   self.extracted_table_list.append(data)
 
-
-    for page_no in pages_dict['scanned']:
-        page_no-=1
-        zoom_x = 2.0
-        zoom_y = 2.0
-        page = self.document[page_no]
-        mat = fitz.Matrix(zoom_x, zoom_y)
-        pix = page.get_pixmap(matrix=mat)
-        pix.save("page.png")
-        table_list,_ = self.table_detector.extract_table_bbox("page.png")
-        # print(table_list)
-        if len(table_list)>0:
-          page_image=cv2.imread('page.png')
-          for table_no,bbox in enumerate(table_list):
-            cropped_image=self.extract_bounding_box(bbox,page_image)
-
-            if self.is_bodered(cropped_image):
-                extract_data = ExtractDataBorderedScanned(page_image, page_no,bbox,table_no,self.doc_path)
-                data= extract_data.execute(page_no,table_no)
-                if data["data"] != [[" "]]:
-                  print("3", data)
-                  self.extracted_table_list.append(data)
-
-            else :
-              lines_remover = TableLinesRemover(cropped_image)
-              image_without_lines = lines_remover.execute()
-              ocr_tool = OcrToTableTool(image_without_lines,cropped_image,page_no,table_no,bbox)
-              data= ocr_tool.execute()
-              if data["data"] != [[" "]]:
-                print("4", data)
-                self.extracted_table_list.append(data)
+                  json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(table_with_cell_mapping) + 1}"}
+                  self.extrated_table_list_with_cell_bbox.append(table_with_cell_mapping)
 
 
+    # for page_no in pages_dict['scanned']:
+    #     page_no-=1
+    #     zoom_x = 2.0
+    #     zoom_y = 2.0
+    #     page = self.document[page_no]
+    #     mat = fitz.Matrix(zoom_x, zoom_y)
+    #     pix = page.get_pixmap(matrix=mat)
+    #     pix.save("page.png")
+    #     table_list,_ = self.table_detector.extract_table_bbox("page.png")
+    #     # print(table_list)
+    #     if len(table_list)>0:
+    #       page_image=cv2.imread('page.png')
+    #       for table_no,bbox in enumerate(table_list):
+    #         cropped_image=self.extract_bounding_box(bbox,page_image)
+
+    #         if self.is_bodered(cropped_image):
+    #             extract_data = ExtractDataBorderedScanned(page_image, page_no,bbox,table_no,self.doc_path)
+    #             data= extract_data.execute(page_no,table_no)
+    #             if data["data"] != [[" "]]:
+    #               print("3", data)
+    #               self.extracted_table_list.append(data)
+
+    #         else :
+    #           lines_remover = TableLinesRemover(cropped_image)
+    #           image_without_lines = lines_remover.execute()
+    #           ocr_tool = OcrToTableTool(image_without_lines,cropped_image,page_no,table_no,bbox)
+    #           data= ocr_tool.execute()
+    #           if data["data"] != [[" "]]:
+    #             print("4", data)
+    #             self.extracted_table_list.append(data)
 
 
-    return self.extracted_table_list
+
+
+    return self.extracted_table_list,{"tables" : self.extrated_table_list_with_cell_bbox}
 
   def extract_bounding_box(self,bbox,image):
       x1, y1, x2, y2 = bbox
@@ -205,7 +213,7 @@ class TableExtraction():
         pix = page.get_pixmap(matrix=mat)
         pix.save("page.png")
 
-        table_list = self.table_detector.execute("page.png","tables_cropped",page_no)
+        table_list = table_detector.execute("page.png","tables_cropped",page_no)
         os.remove("page.png")
         if len(table_list)>=1:
           self.tables[page_no] = table_list
@@ -221,7 +229,7 @@ class TableExtraction():
         mat = fitz.Matrix(zoom_x, zoom_y)
         pix = page.get_pixmap(matrix=mat)
         pix.save("page.png")
-        table_list = self.table_detector.execute("page.png","tables_cropped_digital",page_no)
+        table_list = table_detector.execute("page.png","tables_cropped_digital",page_no)
         if len(table_list)>=1:
           self.tables[page_no] = table_list
       for page_no in scanned_list:
@@ -236,4 +244,6 @@ class TableExtraction():
           self.tables[page_no] = table_list
 
     return self.tables
+
+
 
