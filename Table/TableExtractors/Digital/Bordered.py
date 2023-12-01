@@ -139,7 +139,7 @@ class ExtractDataBordered():
       for r in range(row - 1):
         for c in range(col - 1):
 
-          x0, y0, x1, y1 =  self.column_range[c], self.row_range[r] - 2, self.column_range[c + 1], self.row_range[r + 1]+2
+          x0, y0, x1, y1 =  int(self.column_range[c]), int(self.row_range[r] - 2), int(self.column_range[c + 1]), int(self.row_range[r + 1]+2)
           # cv2.rectangle(self.image, (x0, y0), (x1, y1), (0, 0, 255), 2)
           # cropped_image = self.image[y0:y1, x0:x1]
           # cv2_imshow(cropped_image)
