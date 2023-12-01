@@ -32,7 +32,6 @@ def YoloTableDetector(image,MODEL):
     box_list=boxes.tolist()
     return box_list
 
-YOLO_MODEL = LoadYolo()
 
 
 
