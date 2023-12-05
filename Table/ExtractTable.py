@@ -19,15 +19,57 @@ def return_fianl_json(tables):
   
   fianl_json = {"tables" : []}
   if tables != [None]:
-    for i in range(len(tables)):
+    fianl_json["tables"]=tables
+    # for i in range(len(tables)):
 
-      table_data = tables[i]
-      table_label = f"Table {i+1}"
-      json = {"data" : table_data, "datapoint" : table_label}
+    #   table_data = tables[i]
+    #   table_label = f"Table {i+1}"
+    #   json = {"data" : table_data, "datapoint" : table_label}
 
-      fianl_json["tables"].append(json)
+    #   fianl_json["tables"].append(json)
 
   return fianl_json
+
+def get_table(doc_path,page_no,bbox):
+  doc = fitz.open(doc_path)
+  zoom_x = 3.0
+  zoom_y = 3.0
+  table_json={}
+  if page_no < len(doc):
+    page = doc[page_no]
+    # mat = fitz.Matrix(zoom_x, zoom_y)
+    # pix = page.get_pixmap(matrix=mat)
+    # pix.save("page.png")
+    all_text = page.get_text("words")
+    if len(all_text)>0:
+      if len(extract_words(all_text,bbox)) > 0:
+        gen_table = Borderless_Table_digital(bbox, page_no, doc_path)
+        old_response,table_json = gen_table.execute(page_no,1)
+        return old_response,table_json
+      else :
+        return []
+        
+    else:
+      return []
+    # image=cv2.imread("page.png")
+
+    # cv2.rectangle(image, (round(bbox[0]*zoom_x), round(bbox[1]*zoom_y)),  (round(bbox[2]*zoom_x), round(bbox[3]*zoom_y)), (20,200,0), 2)
+    # for d in table_json["data"]:
+    #   for cell in d['row_value']:
+    #     c=cell
+    #     cv2.rectangle(image, (round(c["bbox"][0]*zoom_x), round(c["bbox"][1]*zoom_y)),  (round(c["bbox"][2]*zoom_x), round(c["bbox"][3]*zoom_y)), (0,0,255), 2)
+    # cv2.imwrite("page.png",image)
+  else: 
+    return []
+
+def manual_extractor(pdf_path,page_no,bbox):
+  try:
+    result = get_table(pdf_path,int(page_no),list(bbox))
+    print(results)
+    json = return_fianl_json(results)
+    return json
+  except Exception as e:
+    print(e)
 
 
 class TableExtraction():
@@ -76,7 +118,7 @@ class TableExtraction():
                         if data["data"] != [[" "]]:
                           self.extracted_table_list.append(data)
 
-                          json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(table_with_cell_mapping) + 1}"}
+                          json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(self.extrated_table_list_with_cell_bbox) + 1}"}
                           self.extrated_table_list_with_cell_bbox.append(table_with_cell_mapping)
 
                     else :
@@ -85,7 +127,7 @@ class TableExtraction():
                         if data["data"] != [[" "]]:
                           self.extracted_table_list.append(data)
 
-                          json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(table_with_cell_mapping) + 1}"}
+                          json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(self.extrated_table_list_with_cell_bbox) + 1}"}
                           self.extrated_table_list_with_cell_bbox.append(table_with_cell_mapping)
 
             # if page_no in pages_dict['scanned']:
@@ -156,7 +198,7 @@ class TableExtraction():
                   if data["data"] != [[" "]]:
                     self.extracted_table_list.append(data)
 
-                    json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(table_with_cell_mapping) + 1}"}
+                    json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(self.extrated_table_list_with_bbox) + 1}"}
                     self.extrated_table_list_with_cell_bbox.append(table_with_cell_mapping)
 
               else :
@@ -165,7 +207,7 @@ class TableExtraction():
                   if data["data"] != [[" "]]:
                     self.extracted_table_list.append(data)
 
-                    json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(table_with_cell_mapping) + 1}"}
+                    json = {"data" : table_with_cell_mapping, "datapoint" : f"Table {len(self.extrated_table_list_with_bbox) + 1}"}
                     self.extrated_table_list_with_cell_bbox.append(table_with_cell_mapping)
 
 

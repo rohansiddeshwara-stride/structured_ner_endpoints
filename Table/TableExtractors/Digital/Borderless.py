@@ -479,7 +479,7 @@ class Borderless_Table_digital():
         row_json["row_value"].append(cell_json)
       table_data.append(row_json)
 
-    table_dict={"page_no":page_no,
+    table_dict={"page_no":[page_no],
                  "bbox":[bbox],
-                 "data":table_data}
+                 "data":[table_data]}
     return table_dict

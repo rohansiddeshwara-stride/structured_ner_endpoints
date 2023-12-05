@@ -8,7 +8,7 @@ import string
 from flask_cors import CORS
 import json
 
-from Table import TableExtraction
+from Table import TableExtraction,manual_extractor
 
 
 table_extractor = TableExtraction()
@@ -38,18 +38,38 @@ def auto_extract():
 
             else:
                 try :
-                    _,extracted_tables = table_extractor.execute(doc_path,page_nos)
+                    extracted_tables_without,extracted_tables_with_cell_mapping = table_extractor.execute(doc_path,page_nos)
                     return jsonify(result)
                 except:
                     return jsonify({"error": "Internal server error"}), 500
         else :
                 try :
-                    _,extracted_tables = table_extractor.execute(doc_path)
+                    extracted_tables_without,extracted_tables_with_cell_mapping = table_extractor.execute(doc_path)
                     return jsonify(result)
                 except:
-                    return jsonify({"error": "Internal server error"}), 50
+                    return jsonify({"error": "Internal server error"}), 500
 
 
+@app.route('/manual_extractor', methods=['POST'])
+def api_process_pdf():
+    data = request.get_json()
+
+    if 'pdf_path' not in data or 'page_no' not in data or 'bbox' not in data:
+        return jsonify({"error": "Missing one or more required fields."}), 400
+
+    pdf_path = data['pdf_path']
+    page_no = data['page_no']
+    bbox = data['bbox']
+
+    if not isinstance(page_no, int) or page_no < 0:
+        return jsonify({"error": "page_no should be a positive integer."}), 400
+
+    if not isinstance(bbox, list) or len(bbox) != 4:
+        return jsonify({"error": "bbox should be a list of 4 integers."}), 400
+    logging.info("Activating manual extraction")
+    result = manual_extractor(pdf_path, page_no, bbox)
+    logging.info("Manual extraction successful")
+    return jsonify(result)
     
 if __name__ == '__main__':
     

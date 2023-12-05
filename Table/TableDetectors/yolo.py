@@ -1,4 +1,4 @@
-from ultralyticsplus import YOLO, render_result
+from ultralytics import YOLO
 import torch
 
 
@@ -8,7 +8,7 @@ import torch
 # MODEL_NAME = 'keremberke/yolov8m-table-extraction'
 
 def LoadYolo():
-    MODEL_NAME = 'keremberke/yolov8m-table-extraction'
+    MODEL_NAME = 'Table/model_weights/best.pt'
     model = YOLO(MODEL_NAME)
 
     model.overrides['conf'] = 0.25  # NMS confidence threshold

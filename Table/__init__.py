@@ -1,1 +1,1 @@
-from .ExtractTable import TableExtraction
+from .ExtractTable import TableExtraction,manual_extractor
